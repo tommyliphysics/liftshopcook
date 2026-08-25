@@ -1,0 +1,66 @@
+import { useEffect, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { doc, getDoc, updateDoc } from 'firebase/firestore'
+import { auth, db } from '../firebase.ts'
+import RecipeForm from '../components/RecipeForm.tsx'
+import {
+  buildRecipeDocument,
+  recipeDocumentToFormValues,
+  type RecipeFormValues,
+} from '../lib/recipe.ts'
+import type { RecipeDocument } from '../types/food.ts'
+import './pages.css'
+
+function EditRecipePage() {
+  const { recipeId } = useParams<{ recipeId: string }>()
+  const navigate = useNavigate()
+  const [values, setValues] = useState<RecipeFormValues | null>(null)
+  const [notFound, setNotFound] = useState(false)
+
+  useEffect(() => {
+    const user = auth.currentUser
+    if (!user || !recipeId) return
+
+    getDoc(doc(db, 'users', user.uid, 'recipes', recipeId)).then((snapshot) => {
+      if (!snapshot.exists()) {
+        setNotFound(true)
+        return
+      }
+      setValues(recipeDocumentToFormValues(snapshot.data() as RecipeDocument))
+    })
+  }, [recipeId])
+
+  async function handleSave(formValues: RecipeFormValues) {
+    const user = auth.currentUser
+    if (!user || !recipeId) return
+
+    await updateDoc(
+      doc(db, 'users', user.uid, 'recipes', recipeId),
+      buildRecipeDocument(formValues),
+    )
+    navigate(`/recipes/${recipeId}`)
+  }
+
+  if (notFound) {
+    return (
+      <section className="page page-center">
+        <h1>Recipe not found</h1>
+      </section>
+    )
+  }
+
+  if (!values) return null
+
+  return (
+    <RecipeForm
+      title="Edit Recipe"
+      submitLabel="Save Changes"
+      savingLabel="Saving..."
+      initialValues={values}
+      onSubmit={handleSave}
+      resetOnSuccess={false}
+    />
+  )
+}
+
+export default EditRecipePage
