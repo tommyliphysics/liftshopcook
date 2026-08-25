@@ -1,3 +1,7 @@
+.gitignore
+.claude
+send.sh
+
 # Logs
 logs
 *.log

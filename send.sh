@@ -1,11 +1,22 @@
 #!/bin/bash
-cd dist
-git init
-git branch -M main
+set -e
+cd "$(dirname "$0")/dist"
+
+if [ ! -d .git ]; then
+  git init
+  git branch -M gh-pages
+  git remote add origin https://github.com/tommyliphysics/liftshopcook.git
+fi
+
 touch .nojekyll
-git remote add origin https://github.com/tommyliphysics/liftshopcook.git
-git add .
-git commit -am "local changes"
-git push -f origin main
-git branch gh-pages
+git add -A
+
+if ! git diff --cached --quiet; then
+  git commit -m "deploy $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+else
+  echo "Nothing changed, skipping commit."
+fi
+
 git push -f origin gh-pages
+
+

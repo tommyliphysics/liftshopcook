@@ -315,6 +315,8 @@
 
   select {
     font: inherit;
+    width: auto;
+    flex-shrink: 0;
     padding: 11px 8px;
     border-radius: var(--radius-sm);
     border: 1.5px solid var(--border);
@@ -344,6 +346,7 @@
 
   select {
     flex-shrink: 0;
+    width: auto;
     font: inherit;
     padding: 10px 6px;
     border-radius: var(--radius-sm);
