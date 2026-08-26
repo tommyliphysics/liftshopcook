@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { doc, getDoc, updateDoc } from 'firebase/firestore'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { deleteDoc, doc, getDoc, updateDoc } from 'firebase/firestore'
 import { auth, db } from '../firebase.ts'
 import RecipeForm from '../components/RecipeForm.tsx'
+import type { AddFoodNavResult } from '../lib/addFoodNav.ts'
 import {
   buildRecipeDocument,
   recipeDocumentToFormValues,
@@ -14,6 +15,9 @@ import './pages.css'
 function EditRecipePage() {
   const { recipeId } = useParams<{ recipeId: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+  const isRestoringRecipe =
+    (location.state as AddFoodNavResult | null)?.formKind === 'recipe'
   const [values, setValues] = useState<RecipeFormValues | null>(null)
   const [notFound, setNotFound] = useState(false)
 
@@ -41,6 +45,14 @@ function EditRecipePage() {
     navigate(`/recipes/${recipeId}`)
   }
 
+  async function handleDelete() {
+    const user = auth.currentUser
+    if (!user || !recipeId) return
+
+    await deleteDoc(doc(db, 'users', user.uid, 'recipes', recipeId))
+    navigate('/recipes')
+  }
+
   if (notFound) {
     return (
       <section className="page page-center">
@@ -49,15 +61,16 @@ function EditRecipePage() {
     )
   }
 
-  if (!values) return null
+  if (!values && !isRestoringRecipe) return null
 
   return (
     <RecipeForm
       title="Edit Recipe"
       submitLabel="Save Changes"
       savingLabel="Saving..."
-      initialValues={values}
+      initialValues={values ?? undefined}
       onSubmit={handleSave}
+      onDelete={handleDelete}
       resetOnSuccess={false}
     />
   )

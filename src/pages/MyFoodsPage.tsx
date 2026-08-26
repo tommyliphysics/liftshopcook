@@ -4,10 +4,24 @@ import { collection, onSnapshot } from 'firebase/firestore'
 import { auth, db } from '../firebase.ts'
 import BackButton from '../components/BackButton.tsx'
 import Icon from '../components/Icon.tsx'
+import { getCurrencySymbol } from '../data/currencies.ts'
+import { formatUnitLabel } from '../lib/units.ts'
 import type { FoodDocument } from '../types/food.ts'
 import './pages.css'
 
 type FoodListItem = FoodDocument & { id: string }
+
+function formatFoodPrice(food: FoodListItem): string {
+  if (!food.price?.amount || !food.price?.currency) return ''
+
+  const unitLabel = formatUnitLabel(food.quantity?.unit)
+  const qtyAmount = food.quantity?.amount
+  const perLabel =
+    qtyAmount && qtyAmount !== '1' ? `${qtyAmount}${unitLabel}` : unitLabel
+
+  const amount = Number(food.price.amount).toFixed(2)
+  return `${getCurrencySymbol(food.price.currency)}${amount}/${perLabel}`
+}
 
 function MyFoodsPage() {
   const [foods, setFoods] = useState<FoodListItem[]>([])
@@ -18,10 +32,12 @@ function MyFoodsPage() {
 
     return onSnapshot(collection(db, 'users', user.uid, 'foods'), (snapshot) => {
       setFoods(
-        snapshot.docs.map(
-          (docSnapshot) =>
-            ({ id: docSnapshot.id, ...docSnapshot.data() }) as FoodListItem,
-        ),
+        snapshot.docs
+          .map(
+            (docSnapshot) =>
+              ({ id: docSnapshot.id, ...docSnapshot.data() }) as FoodListItem,
+          )
+          .sort((a, b) => a.name.localeCompare(b.name)),
       )
     })
   }, [])
@@ -44,6 +60,7 @@ function MyFoodsPage() {
               <tr>
                 <th>Name</th>
                 <th>Brand</th>
+                <th>Price</th>
               </tr>
             </thead>
             <tbody>
@@ -53,6 +70,7 @@ function MyFoodsPage() {
                     <Link to={`/foods/${food.id}/edit`}>{food.name}</Link>
                   </td>
                   <td>{food.price?.brand}</td>
+                  <td className="cell-mono">{formatFoodPrice(food)}</td>
                 </tr>
               ))}
             </tbody>

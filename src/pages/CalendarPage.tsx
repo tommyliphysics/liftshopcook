@@ -10,6 +10,7 @@ import Icon from '../components/Icon.tsx'
 import { computeReport, type ReportData } from '../lib/report.ts'
 import type { ExchangeRateRecord } from '../lib/currencyResolution.ts'
 import {
+  addDays,
   buildDateRange,
   capitalize,
   formatDayHeading,
@@ -24,6 +25,8 @@ import {
 } from '../lib/timeline.ts'
 import type { MealListItem, MealTime } from '../types/food.ts'
 import './pages.css'
+
+const FUTURE_DAYS = 365
 
 const TIME_ORDER: Record<MealTime, number> = {
   breakfast: 0,
@@ -46,6 +49,9 @@ function CalendarPage() {
   const [exchangeRates, setExchangeRates] = useState<ExchangeRateRecord[]>([])
   const [expandedWeekStart, setExpandedWeekStart] = useState<string | null>(null)
   const [expandedDay, setExpandedDay] = useState<string | null>(null)
+  const [expandedMealRecipes, setExpandedMealRecipes] = useState<Set<string>>(
+    new Set(),
+  )
 
   useEffect(() => {
     const user = auth.currentUser
@@ -81,9 +87,14 @@ function CalendarPage() {
     return creationTime ? toDateStr(new Date(creationTime)) : todayStr
   }, [todayStr])
 
+  const futureEndStr = useMemo(
+    () => addDays(todayStr, FUTURE_DAYS),
+    [todayStr],
+  )
+
   const timelineDates = useMemo(
-    () => buildDateRange(creationDateStr, todayStr),
-    [creationDateStr, todayStr],
+    () => buildDateRange(creationDateStr, futureEndStr),
+    [creationDateStr, futureEndStr],
   )
 
   const mealsByDate = useMemo(() => {
@@ -98,9 +109,13 @@ function CalendarPage() {
     return groups
   }, [meals])
 
-  useEffect(() => {
+  function scrollToToday(behavior: ScrollBehavior = 'smooth') {
     const el = document.getElementById(`day-${todayStr}`)
-    el?.scrollIntoView({ block: 'center' })
+    el?.scrollIntoView({ behavior, block: 'start' })
+  }
+
+  useEffect(() => {
+    scrollToToday('instant')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -138,10 +153,32 @@ function CalendarPage() {
     setExpandedDay((current) => (current === dateStr ? null : dateStr))
   }
 
+  function toggleMealRecipe(e: React.MouseEvent, key: string) {
+    e.preventDefault()
+    e.stopPropagation()
+    setExpandedMealRecipes((current) => {
+      const next = new Set(current)
+      if (next.has(key)) {
+        next.delete(key)
+      } else {
+        next.add(key)
+      }
+      return next
+    })
+  }
+
   return (
-    <section className="page page-center">
+    <section className="page page-calendar">
       <div className="calendar-header-row">
         <h1>Calendar</h1>
+        <button
+          type="button"
+          className="icon-btn"
+          onClick={() => scrollToToday()}
+          aria-label="Scroll to today"
+        >
+          <Icon name="target" size={17} />
+        </button>
         <button
           type="button"
           className="icon-btn"
@@ -152,13 +189,15 @@ function CalendarPage() {
         </button>
       </div>
 
-      <div className="timeline">
-        {timelineDates.map((dateStr) => {
+      <div className="calendar-scroll">
+        <div className="timeline">
+          {timelineDates.map((dateStr) => {
           const date = parseDateStr(dateStr)
           const isSunday = date.getDay() === 0
           const isFirstOfMonth = date.getDate() === 1
           const isJan1 = isFirstOfMonth && date.getMonth() === 0
           const dayMeals = mealsByDate[dateStr] ?? []
+          const isToday = dateStr === todayStr
 
           return (
             <div key={dateStr}>
@@ -222,11 +261,12 @@ function CalendarPage() {
               <div className="timeline-day" id={`day-${dateStr}`}>
                 <button
                   type="button"
-                  className="timeline-date-link"
+                  className={`timeline-date-link${isToday ? ' timeline-date-link--today' : ''}`}
                   onClick={() => toggleDay(dateStr)}
                   aria-expanded={expandedDay === dateStr}
                 >
                   {formatDayHeading(dateStr)}
+                  {isToday && <span className="meal-time-tag">Today</span>}
                   <Icon name="chevron-down" size={14} />
                 </button>
 
@@ -257,9 +297,41 @@ function CalendarPage() {
                       </div>
                     )}
                     <ul>
-                      {Object.values(meal.foods ?? {}).map((food, i) => (
-                        <li key={i}>{food.name}</li>
-                      ))}
+                      {(
+                        meal.entries ??
+                        Object.values(meal.foods ?? {}).map((food) => ({
+                          kind: 'food' as const,
+                          foodId: '',
+                          name: food.name,
+                        }))
+                      ).map((entry, i) => {
+                        if (entry.kind === 'recipe') {
+                          const key = `${meal.id}-${i}`
+                          const expanded = expandedMealRecipes.has(key)
+                          return (
+                            <li key={i}>
+                              <button
+                                type="button"
+                                className="meal-entry-recipe"
+                                aria-expanded={expanded}
+                                onClick={(e) => toggleMealRecipe(e, key)}
+                              >
+                                <Icon name="book" size={12} />
+                                {entry.name}
+                                <Icon name="chevron-down" size={12} />
+                              </button>
+                              {expanded && (
+                                <ul className="meal-entry-subitems">
+                                  {entry.foods.map((food, j) => (
+                                    <li key={j}>{food.name}</li>
+                                  ))}
+                                </ul>
+                              )}
+                            </li>
+                          )
+                        }
+                        return <li key={i}>{entry.name}</li>
+                      })}
                     </ul>
                   </Link>
                 ))}
@@ -275,9 +347,12 @@ function CalendarPage() {
             </div>
           )
         })}
+        </div>
       </div>
 
-      <BackButton />
+      <div className="calendar-footer">
+        <BackButton />
+      </div>
 
       <Modal
         open={jumpOpen}
@@ -290,7 +365,7 @@ function CalendarPage() {
           id="jump-date"
           type="date"
           min={creationDateStr}
-          max={todayStr}
+          max={futureEndStr}
           value={jumpDate}
           onChange={(e) => handleJumpDateChange(e.target.value)}
         />

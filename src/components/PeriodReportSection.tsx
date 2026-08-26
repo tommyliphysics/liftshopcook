@@ -5,7 +5,7 @@ import NutritionStats from './NutritionStats.tsx'
 import Icon from './Icon.tsx'
 import { getCurrencySymbol } from '../data/currencies.ts'
 import { computeReport, type ShoppingListEntry } from '../lib/report.ts'
-import { bestEnergyTotal } from '../lib/units.ts'
+import { fromCalories } from '../lib/units.ts'
 import {
   autoResolveShoppingList,
   findBestAutoTarget,
@@ -44,7 +44,10 @@ function PeriodReportSection({
   const mismatched = hasCurrencyMismatch(entries)
   const totalSpend = entries.reduce((sum, entry) => sum + entry.totalPrice, 0)
   const spendCurrency = entries[0]?.currency ?? ''
-  const energy = bestEnergyTotal(report.avgCaloriesPerDay, report.energyUnitsInUse)
+  const energy = {
+    amount: fromCalories(report.avgCaloriesPerDay, report.dominantEnergyUnit),
+    unit: report.dominantEnergyUnit,
+  }
 
   function handleResolved(resolved: ShoppingListEntry[]) {
     setEntries(resolved)
@@ -83,7 +86,7 @@ function PeriodReportSection({
           ))}
         <div className="report-stat">
           <span className="report-stat-label">
-            {variant === 'week' ? 'Avg. Calories/Day' : 'Calories'}
+            {variant === 'week' ? `Avg. ${energy.unit}/Day` : 'Energy'}
           </span>
           <span className="report-stat-value">
             {Math.round(energy.amount)} {energy.unit}

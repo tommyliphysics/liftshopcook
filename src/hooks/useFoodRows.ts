@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react'
 import { collection, onSnapshot } from 'firebase/firestore'
 import { auth, db } from '../firebase.ts'
 import type { FoodRow } from '../lib/foodRow.ts'
-import type { FoodDocument, QuantityUnit } from '../types/food.ts'
+import type { FoodDocument, QuantityUnit, RecipeDocument } from '../types/food.ts'
 
 export type FoodListItem = FoodDocument & { id: string }
+export type RecipeListItem = RecipeDocument & { id: string }
 
 export function useFoodRows(initialRows: FoodRow[] = []) {
   const [foods, setFoods] = useState<FoodListItem[]>([])
+  const [recipes, setRecipes] = useState<RecipeListItem[]>([])
   const [rows, setRows] = useState<FoodRow[]>(initialRows)
 
   useEffect(() => {
@@ -24,6 +26,23 @@ export function useFoodRows(initialRows: FoodRow[] = []) {
     })
   }, [])
 
+  useEffect(() => {
+    const user = auth.currentUser
+    if (!user) return
+
+    return onSnapshot(
+      collection(db, 'users', user.uid, 'recipes'),
+      (snapshot) => {
+        setRecipes(
+          snapshot.docs.map(
+            (docSnapshot) =>
+              ({ id: docSnapshot.id, ...docSnapshot.data() }) as RecipeListItem,
+          ),
+        )
+      },
+    )
+  }, [])
+
   function addRow() {
     setRows((current) => [
       ...current,
@@ -31,6 +50,8 @@ export function useFoodRows(initialRows: FoodRow[] = []) {
         id: crypto.randomUUID(),
         foodId: '',
         foodSnapshot: null,
+        recipeId: '',
+        recipeSnapshot: null,
         amount: '',
         unit: 'g',
       },
@@ -44,8 +65,25 @@ export function useFoodRows(initialRows: FoodRow[] = []) {
         id: crypto.randomUUID(),
         foodId: food.id,
         foodSnapshot: food,
-        amount: '',
-        unit: 'g',
+        recipeId: '',
+        recipeSnapshot: null,
+        amount: food.quantity.amount,
+        unit: food.quantity.unit,
+      },
+    ])
+  }
+
+  function addRowWithRecipe(recipe: RecipeListItem) {
+    setRows((current) => [
+      ...current,
+      {
+        id: crypto.randomUUID(),
+        foodId: '',
+        foodSnapshot: null,
+        recipeId: recipe.id,
+        recipeSnapshot: recipe,
+        amount: '1',
+        unit: 'serving',
       },
     ])
   }
@@ -54,7 +92,36 @@ export function useFoodRows(initialRows: FoodRow[] = []) {
     const food = foods.find((f) => f.id === foodId) ?? null
     setRows((current) =>
       current.map((row) =>
-        row.id === id ? { ...row, foodId, foodSnapshot: food } : row,
+        row.id === id
+          ? {
+              ...row,
+              foodId,
+              foodSnapshot: food,
+              recipeId: '',
+              recipeSnapshot: null,
+              amount: food ? food.quantity.amount : row.amount,
+              unit: food ? food.quantity.unit : row.unit,
+            }
+          : row,
+      ),
+    )
+  }
+
+  function updateRowRecipe(id: string, recipeId: string) {
+    const recipe = recipes.find((r) => r.id === recipeId) ?? null
+    setRows((current) =>
+      current.map((row) =>
+        row.id === id
+          ? {
+              ...row,
+              foodId: '',
+              foodSnapshot: null,
+              recipeId: recipe ? recipe.id : '',
+              recipeSnapshot: recipe,
+              amount: recipe ? '1' : row.amount,
+              unit: recipe ? 'serving' : row.unit,
+            }
+          : row,
       ),
     )
   }
@@ -77,11 +144,14 @@ export function useFoodRows(initialRows: FoodRow[] = []) {
 
   return {
     foods,
+    recipes,
     rows,
     setRows,
     addRow,
     addRowWithFood,
+    addRowWithRecipe,
     updateRowFood,
+    updateRowRecipe,
     updateRowAmount,
     updateRowUnit,
     removeRow,

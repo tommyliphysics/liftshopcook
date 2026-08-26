@@ -13,6 +13,8 @@ export type IconName =
   | 'book'
   | 'tag'
   | 'logout'
+  | 'trash'
+  | 'target'
 
 type IconProps = {
   name: IconName
@@ -58,6 +60,15 @@ const GLYPHS: Record<IconName, ReactNode> = {
   ),
   logout: (
     <path d="M9 21H5.5A1.5 1.5 0 0 1 4 19.5v-15A1.5 1.5 0 0 1 5.5 3H9M15 16l5-4-5-4M20 12H9" />
+  ),
+  trash: (
+    <path d="M4 7h16M9 7V4h6v3M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13M10 11v6M14 11v6" />
+  ),
+  target: (
+    <>
+      <circle cx="12" cy="12" r="7.5" />
+      <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+    </>
   ),
 }
 

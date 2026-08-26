@@ -16,6 +16,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 
   if (!checked) return null
   if (!user) return <Navigate to="/" replace />
+  if (!user.emailVerified) return <Navigate to="/verify-email" replace />
   return <>{children}</>
 }
 

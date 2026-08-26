@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom'
 import LandingPage from './pages/LandingPage.tsx'
 import LoginPage from './pages/LoginPage.tsx'
 import CreateAccountPage from './pages/CreateAccountPage.tsx'
+import VerifyEmailPage from './pages/VerifyEmailPage.tsx'
 import DashboardPage from './pages/DashboardPage.tsx'
 import AddFoodPage from './pages/AddFoodPage.tsx'
 import MyFoodsPage from './pages/MyFoodsPage.tsx'
@@ -21,6 +22,7 @@ function App() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/create-account" element={<CreateAccountPage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route
         path="/dashboard"
         element={

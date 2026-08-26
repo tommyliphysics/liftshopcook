@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import Modal from './Modal.tsx'
 import { getCurrencySymbol } from '../data/currencies.ts'
-import { formatGrams } from '../lib/units.ts'
+import { formatQuantity } from '../lib/units.ts'
 import { auth } from '../firebase.ts'
 import {
   currenciesInUse,
@@ -189,7 +189,7 @@ function CurrencyMismatchModal({
                 <div className="currency-fix-row-label">
                   <span className="currency-fix-row-name">{entry.name}</span>
                   <span className="currency-fix-row-qty">
-                    {formatGrams(entry.totalGrams)}
+                    {formatQuantity(entry)}
                   </span>
                 </div>
                 <input

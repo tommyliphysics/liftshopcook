@@ -125,6 +125,7 @@ function NutritionModal({
           >
             <option value="g">g</option>
             <option value="mg">mg</option>
+            <option value="ug">μg</option>
           </select>
           <button
             type="button"

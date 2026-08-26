@@ -1,5 +1,5 @@
 import { getCurrencySymbol } from '../data/currencies.ts'
-import { formatGrams } from '../lib/units.ts'
+import { formatQuantity } from '../lib/units.ts'
 import type { ShoppingListEntry } from '../lib/report.ts'
 
 type ShoppingListTableProps = {
@@ -25,7 +25,7 @@ function ShoppingListTable({ entries }: ShoppingListTableProps) {
             <tr key={entry.foodId}>
               <td>{entry.name}</td>
               <td>{entry.brand}</td>
-              <td className="cell-mono">{formatGrams(entry.totalGrams)}</td>
+              <td className="cell-mono">{formatQuantity(entry)}</td>
               <td className="cell-mono">
                 {getCurrencySymbol(entry.currency)}
                 {entry.totalPrice.toFixed(2)}

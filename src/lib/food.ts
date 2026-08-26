@@ -63,6 +63,37 @@ export function buildFoodDocument(values: FoodFormValues): FoodDocument {
   }
 }
 
+/**
+ * Picks the currency with the highest total price across a set of foods
+ * (summing every food's price within each currency), so new foods default
+ * to whichever currency already dominates the user's data. Returns null if
+ * no food has a priced, currencied entry.
+ */
+export function dominantCurrency(foods: FoodDocument[]): string | null {
+  const totals = new Map<string, number>()
+
+  for (const food of foods) {
+    const currency = food.price.currency
+    if (!currency) continue
+
+    const amount = Number(food.price.amount)
+    if (Number.isNaN(amount)) continue
+
+    totals.set(currency, (totals.get(currency) ?? 0) + amount)
+  }
+
+  let best: string | null = null
+  let bestTotal = -Infinity
+  for (const [currency, total] of totals) {
+    if (total > bestTotal) {
+      bestTotal = total
+      best = currency
+    }
+  }
+
+  return best
+}
+
 export function foodDocumentToFormValues(
   record: FoodDocument,
 ): FoodFormValues {

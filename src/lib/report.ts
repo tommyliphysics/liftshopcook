@@ -1,4 +1,4 @@
-import { toCalories, toGrams, toMilligrams } from './units.ts'
+import { toCalories, toGrams, toMilligrams, toMilliliters } from './units.ts'
 import type { EnergyUnit, MealDocument } from '../types/food.ts'
 
 export type ShoppingListEntry = {
@@ -6,6 +6,8 @@ export type ShoppingListEntry = {
   name: string
   brand: string
   totalGrams: number
+  totalMilliliters: number
+  totalCount: number
   totalPrice: number
   currency: string
 }
@@ -19,6 +21,7 @@ export type ReportData = {
   days: number
   avgCaloriesPerDay: number
   energyUnitsInUse: EnergyUnit[]
+  dominantEnergyUnit: EnergyUnit
   avgCostPerDay: number
   costCurrency: string | null
   shoppingList: ShoppingListEntry[]
@@ -36,16 +39,32 @@ export function computeReport(meals: MealDocument[], days: number): ReportData {
   let totalProtein = 0
   const currencies = new Set<string>()
   const energyUnits = new Set<EnergyUnit>()
+  const caloriesByEnergyUnit = new Map<EnergyUnit, number>()
   const microMap = new Map<string, number>()
   const shoppingMap = new Map<
     string,
-    { name: string; brand: string; totalGrams: number; totalPrice: number; currency: string }
+    {
+      name: string
+      brand: string
+      totalGrams: number
+      totalMilliliters: number
+      totalCount: number
+      totalPrice: number
+      currency: string
+    }
   >()
 
   for (const meal of meals) {
     for (const [foodId, food] of Object.entries(meal.foods ?? {})) {
-      totalCalories += toCalories(food.energy.amount, food.energy.unit)
-      if (food.energy.unit) energyUnits.add(food.energy.unit)
+      const calories = toCalories(food.energy.amount, food.energy.unit)
+      totalCalories += calories
+      if (food.energy.unit) {
+        energyUnits.add(food.energy.unit)
+        caloriesByEnergyUnit.set(
+          food.energy.unit,
+          (caloriesByEnergyUnit.get(food.energy.unit) ?? 0) + calories,
+        )
+      }
 
       const price = Number(food.price.amount)
       const safePrice = Number.isNaN(price) ? 0 : price
@@ -64,15 +83,25 @@ export function computeReport(meals: MealDocument[], days: number): ReportData {
       }
 
       const grams = toGrams(food.quantity.amount, food.quantity.unit)
+      const milliliters = toMilliliters(
+        food.quantity.amount,
+        food.quantity.unit,
+      )
+      const count =
+        food.quantity.unit === '' ? Number(food.quantity.amount) || 0 : 0
       const existing = shoppingMap.get(foodId)
       if (existing) {
         existing.totalGrams += grams
+        existing.totalMilliliters += milliliters
+        existing.totalCount += count
         existing.totalPrice += safePrice
       } else {
         shoppingMap.set(foodId, {
           name: food.name,
           brand: food.price.brand,
           totalGrams: grams,
+          totalMilliliters: milliliters,
+          totalCount: count,
           totalPrice: safePrice,
           currency: food.price.currency,
         })
@@ -82,10 +111,20 @@ export function computeReport(meals: MealDocument[], days: number): ReportData {
 
   const safeDays = days || 1
 
+  let dominantEnergyUnit: EnergyUnit = 'cal'
+  let bestUnitCalories = -Infinity
+  for (const [unit, calories] of caloriesByEnergyUnit) {
+    if (calories > bestUnitCalories) {
+      bestUnitCalories = calories
+      dominantEnergyUnit = unit
+    }
+  }
+
   return {
     days,
     avgCaloriesPerDay: totalCalories / safeDays,
     energyUnitsInUse: [...energyUnits],
+    dominantEnergyUnit,
     avgCostPerDay: totalCost / safeDays,
     costCurrency: currencies.size === 1 ? [...currencies][0] : null,
     shoppingList: [...shoppingMap.entries()].map(([foodId, entry]) => ({

@@ -1,5 +1,10 @@
-import { buildFoodsMap, foodsMapToRows, type FoodRow } from './foodRow.ts'
-import type { MealDocument, MealTime } from '../types/food.ts'
+import {
+  buildFoodsMap,
+  buildMealEntries,
+  mealToRows,
+  type FoodRow,
+} from './foodRow.ts'
+import type { FoodDocument, MealDocument, MealTime } from '../types/food.ts'
 
 export type MealFoodRow = FoodRow
 
@@ -17,12 +22,16 @@ export const EMPTY_MEAL_FORM_VALUES: MealFormValues = {
   rows: [],
 }
 
-export function buildMealDocument(values: MealFormValues): MealDocument {
+export function buildMealDocument(
+  values: MealFormValues,
+  currentFoods: Record<string, FoodDocument> = {},
+): MealDocument {
   return {
     date: values.date,
     name: values.name,
     time: values.time,
-    foods: buildFoodsMap(values.rows),
+    foods: buildFoodsMap(values.rows, currentFoods),
+    entries: buildMealEntries(values.rows),
   }
 }
 
@@ -33,6 +42,6 @@ export function mealDocumentToFormValues(
     date: record.date,
     time: record.time,
     name: record.name,
-    rows: foodsMapToRows(record.foods),
+    rows: mealToRows(record),
   }
 }

@@ -1,7 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import BackButton from './BackButton.tsx'
+import ConfirmDeleteModal from './ConfirmDeleteModal.tsx'
+import Icon from './Icon.tsx'
 import RecipeFoodRowsField from './RecipeFoodRowsField.tsx'
 import { useFoodRows } from '../hooks/useFoodRows.ts'
+import type { AddFoodNavResult } from '../lib/addFoodNav.ts'
 import {
   EMPTY_RECIPE_FORM_VALUES,
   type RecipeFormValues,
@@ -14,6 +18,7 @@ type RecipeFormProps = {
   savingLabel: string
   initialValues?: RecipeFormValues
   onSubmit: (values: RecipeFormValues) => Promise<void>
+  onDelete?: () => Promise<void>
   resetOnSuccess?: boolean
 }
 
@@ -23,9 +28,18 @@ function RecipeForm({
   savingLabel,
   initialValues,
   onSubmit,
+  onDelete,
   resetOnSuccess = true,
 }: RecipeFormProps) {
-  const start = initialValues ?? EMPTY_RECIPE_FORM_VALUES
+  const location = useLocation()
+  const navigate = useNavigate()
+  const restoreResult = location.state as AddFoodNavResult | null
+  const restoredRecipe =
+    restoreResult?.formKind === 'recipe' ? restoreResult : null
+
+  const start =
+    restoredRecipe?.recipeValues ?? initialValues ?? EMPTY_RECIPE_FORM_VALUES
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   const [name, setName] = useState(start.name)
   const [servings, setServings] = useState(start.servings)
@@ -42,6 +56,39 @@ function RecipeForm({
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  const appliedNewFood = useRef(false)
+  useEffect(() => {
+    if (appliedNewFood.current || !restoredRecipe) return
+    appliedNewFood.current = true
+
+    const { newFood } = restoredRecipe
+    setRows((current) => [
+      ...current,
+      {
+        id: crypto.randomUUID(),
+        foodId: newFood.id,
+        foodSnapshot: newFood,
+        recipeId: '',
+        recipeSnapshot: null,
+        amount: newFood.quantity.amount,
+        unit: newFood.quantity.unit,
+      },
+    ])
+    navigate(location.pathname + location.search, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function handleCreateNewFood(query: string) {
+    navigate('/add-food', {
+      state: {
+        formKind: 'recipe',
+        recipeValues: { name, servings, rows, recipeText },
+        returnTo: location.pathname + location.search,
+        prefillName: query,
+      },
+    })
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -65,7 +112,23 @@ function RecipeForm({
 
   return (
     <section className="page page-center">
-      <h1>{title}</h1>
+      <Link to="/recipes" className="top-link">
+        <Icon name="book" size={13} />
+        My Recipes
+      </Link>
+      <div className="title-row">
+        <h1>{title}</h1>
+        {onDelete && (
+          <button
+            type="button"
+            className="icon-btn icon-btn-danger"
+            onClick={() => setDeleteOpen(true)}
+            aria-label="Delete recipe"
+          >
+            <Icon name="trash" size={16} />
+          </button>
+        )}
+      </div>
       <form className="auth-form" onSubmit={handleSubmit}>
         <label htmlFor="name">Name</label>
         <input
@@ -91,6 +154,7 @@ function RecipeForm({
           rows={rows}
           foods={foods}
           onAddFood={addRowWithFood}
+          onCreateNewFood={handleCreateNewFood}
           onAmountChange={updateRowAmount}
           onUnitChange={updateRowUnit}
           onRemoveRow={removeRow}
@@ -114,6 +178,16 @@ function RecipeForm({
       </form>
 
       <BackButton />
+
+      {onDelete && (
+        <ConfirmDeleteModal
+          open={deleteOpen}
+          onClose={() => setDeleteOpen(false)}
+          onConfirm={onDelete}
+          title="Delete Recipe?"
+          message={`This will permanently delete "${name || 'this recipe'}". This can't be undone.`}
+        />
+      )}
     </section>
   )
 }

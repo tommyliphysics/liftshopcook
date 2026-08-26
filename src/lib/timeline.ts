@@ -9,6 +9,12 @@ export function parseDateStr(dateStr: string): Date {
   return new Date(`${dateStr}T00:00:00`)
 }
 
+export function addDays(dateStr: string, days: number): string {
+  const date = parseDateStr(dateStr)
+  date.setDate(date.getDate() + days)
+  return toDateStr(date)
+}
+
 export function buildDateRange(startStr: string, endStr: string): string[] {
   const dates: string[] = []
   const cursor = parseDateStr(startStr)

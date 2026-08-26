@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { doc, getDoc, updateDoc } from 'firebase/firestore'
+import { deleteDoc, doc, getDoc, updateDoc } from 'firebase/firestore'
 import { auth, db } from '../firebase.ts'
 import FoodForm from '../components/FoodForm.tsx'
 import {
@@ -41,6 +41,14 @@ function EditFoodPage() {
     navigate('/foods')
   }
 
+  async function handleDelete() {
+    const user = auth.currentUser
+    if (!user || !foodId) return
+
+    await deleteDoc(doc(db, 'users', user.uid, 'foods', foodId))
+    navigate('/foods')
+  }
+
   if (notFound) {
     return (
       <section className="page page-center">
@@ -58,6 +66,7 @@ function EditFoodPage() {
       savingLabel="Saving..."
       initialValues={values}
       onSubmit={handleSave}
+      onDelete={handleDelete}
       resetOnSuccess={false}
     />
   )

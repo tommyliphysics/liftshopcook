@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { signInWithPopup } from 'firebase/auth'
-import { auth, googleProvider } from '../firebase.ts'
+import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth'
+import { auth } from '../firebase.ts'
 import GoogleButton from '../components/GoogleButton.tsx'
+import { signInWithGoogle } from '../lib/googleSignIn.ts'
 import './pages.css'
 
 function CreateAccountPage() {
@@ -11,17 +12,39 @@ function CreateAccountPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setError('')
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.')
+      return
+    }
+
+    setSaving(true)
+    try {
+      const credential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password,
+      )
+      await sendEmailVerification(credential.user)
+      navigate('/verify-email')
+    } catch {
+      setError('Could not create account. Please try again.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function handleGoogleSignIn() {
     setError('')
-    try {
-      await signInWithPopup(auth, googleProvider)
+    const success = await signInWithGoogle()
+    if (success) {
       navigate('/dashboard')
-    } catch {
+    } else {
       setError('Google sign-in failed. Please try again.')
     }
   }
@@ -67,8 +90,8 @@ function CreateAccountPage() {
 
         {error && <p className="form-error">{error}</p>}
 
-        <button type="submit" className="btn btn-primary">
-          Create Account
+        <button type="submit" className="btn btn-primary" disabled={saving}>
+          {saving ? 'Creating...' : 'Create Account'}
         </button>
       </form>
       <Link to="/" className="back-link">

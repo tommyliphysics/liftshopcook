@@ -8,6 +8,7 @@ type RecipeFoodRowsFieldProps = {
   rows: FoodRow[]
   foods: FoodListItem[]
   onAddFood: (food: FoodListItem) => void
+  onCreateNewFood: (query: string) => void
   onAmountChange: (id: string, amount: string) => void
   onUnitChange: (id: string, unit: QuantityUnit) => void
   onRemoveRow: (id: string) => void
@@ -17,6 +18,7 @@ function RecipeFoodRowsField({
   rows,
   foods,
   onAddFood,
+  onCreateNewFood,
   onAmountChange,
   onUnitChange,
   onRemoveRow,
@@ -46,6 +48,10 @@ function RecipeFoodRowsField({
             <option value="kg">kg</option>
             <option value="lb">lb</option>
             <option value="oz">oz</option>
+            <option value="mL">mL</option>
+            <option value="qt">qt</option>
+            <option value="fl oz">fl oz</option>
+            <option value="">ea</option>
           </select>
           <button
             type="button"
@@ -63,7 +69,7 @@ function RecipeFoodRowsField({
         className="btn btn-secondary btn-full"
         onClick={() => setSearchOpen(true)}
       >
-        + Add food
+        + Add ingredient
       </button>
 
       <FoodSearchModal
@@ -71,6 +77,7 @@ function RecipeFoodRowsField({
         onClose={() => setSearchOpen(false)}
         foods={foods}
         onSelect={onAddFood}
+        onCreateNew={onCreateNewFood}
       />
     </>
   )

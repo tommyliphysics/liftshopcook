@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Modal from './Modal.tsx'
+import Icon from './Icon.tsx'
 import type { FoodListItem } from '../hooks/useFoodRows.ts'
 
 type FoodSearchModalProps = {
@@ -7,6 +8,7 @@ type FoodSearchModalProps = {
   onClose: () => void
   foods: FoodListItem[]
   onSelect: (food: FoodListItem) => void
+  onCreateNew: (query: string) => void
 }
 
 function FoodSearchModal({
@@ -14,6 +16,7 @@ function FoodSearchModal({
   onClose,
   foods,
   onSelect,
+  onCreateNew,
 }: FoodSearchModalProps) {
   const [query, setQuery] = useState('')
 
@@ -28,6 +31,11 @@ function FoodSearchModal({
     onClose()
   }
 
+  function handleCreateNew() {
+    onCreateNew(query.trim())
+    setQuery('')
+  }
+
   const trimmed = query.trim().toLowerCase()
   const results = trimmed
     ? foods.filter((food) => food.name.toLowerCase().includes(trimmed))
@@ -38,7 +46,7 @@ function FoodSearchModal({
       open={open}
       onClose={handleClose}
       titleId="food-search-title"
-      title="Add Food"
+      title="Add Ingredient"
     >
       <label htmlFor="food-search">Food name</label>
       <input
@@ -63,7 +71,18 @@ function FoodSearchModal({
             ))}
           </ul>
         ) : (
-          <p className="food-search-empty">No matching foods.</p>
+          <ul className="food-search-results">
+            <li>
+              <button
+                type="button"
+                className="food-search-result-new"
+                onClick={handleCreateNew}
+              >
+                <Icon name="plus" size={14} />
+                New Food
+              </button>
+            </li>
+          </ul>
         ))}
 
       <button
